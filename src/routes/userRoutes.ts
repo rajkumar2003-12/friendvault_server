@@ -1,9 +1,10 @@
 import express from 'express';
-import { searchUsers } from '../controllers/user';
+import { getInitialUsers, searchUsers } from '../controllers/user';
 import { protect } from '../middlewares/authMiddleware';
 
 const router = express.Router();
 
-router.get('/search', protect, searchUsers);
+router.post('/search', protect, searchUsers);
+router.get('/initial', protect, getInitialUsers);
 
 export default router;

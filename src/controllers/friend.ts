@@ -29,7 +29,9 @@ export const sendFriendRequest = async (req: any, res: any) => {
         receiver.friendRequests.push(senderId);
         await receiver.save();
 
-        res.status(200).json({ message: 'Friend request sent' });
+        const isFollowed = receiver.friendRequests.includes(senderId);
+        
+        res.status(200).json({ message: 'Friend request sent',isFollowed });
     } catch (error) {
         res.status(500).json({ message: 'Error sending friend request', error });
     }
@@ -98,7 +100,7 @@ export const getFriendRecommendations = async (req: any, res: any) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Find mutual friends
+
         const mutualFriendsMap: Record<string, number> = {};
         for (const friend of user.friends) {
             const friendData = await User.findById(friend._id).populate('friends');
@@ -124,3 +126,62 @@ export const getFriendRecommendations = async (req: any, res: any) => {
         res.status(500).json({ message: 'Error fetching friend recommendations', error });
     }
 };
+
+
+export const unfollowUser = async (req: any, res: any) => {
+  const { userId } = req.params;
+  const senderId = req.user; 
+
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(400).json({ message: "Invalid user ID" });
+  }
+
+  try {
+    const receiver = await User.findById(userId);
+    const sender = await User.findById(senderId);
+
+    if (!receiver || !sender) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (!sender.friends.includes(userId)) {
+      return res.status(400).json({ message: "You are not following this user" });
+    }
+
+
+    sender.friends = sender.friends.filter(
+      (friendId) => friendId.toString() !== userId
+    );
+    receiver.friends = receiver.friends.filter(
+      (friendId) => friendId.toString() !== senderId
+    );
+
+    await sender.save();
+    await receiver.save();
+
+    res.status(200).json({ message: "Unfollowed successfully" });
+  } catch (error) {
+    console.error("Error during unfollow:", error);
+    res.status(500).json({ message: "Error during unfollow", error });
+  }
+};
+
+
+export const getFollowStatus = async (req: any, res: any) => {
+    const { userId } = req.params;
+    const senderId = req.user;
+  
+    try {
+      const sender = await User.findById(senderId);
+  
+      if (!sender) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+  
+      const isFollowed = sender.friends.includes(userId); // Check if the user is in the friends list
+      res.status(200).json({ isFollowed });
+    } catch (error) {
+      res.status(500).json({ message: 'Error fetching follow status', error });
+    }
+  };
+  
